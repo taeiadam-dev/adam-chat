@@ -3802,11 +3802,17 @@ Rule 8 — PORTABLE BY DEFAULT: No file paths. No machine-specific references. N
     el('chat-btn-send').disabled = true;
 
     // --- Semantic Echo Cache 🦇 ---
-    const cleanText = text.toLowerCase();
+    // LEGO fix (v4.8.1): cache key is now scoped by provider + model so switching
+    // providers never replays a stale answer from a different provider. Without
+    // this, picking Groq/Gemini after Anthropic would hit the cache and replay
+    // the Anthropic response without ever calling the new provider.
+    const _cacheProv  = el('chat-cfg-provider')?.value || '';
+    const _cacheModel = el('chat-cfg-model')?.value || '';
+    const cleanText = `${_cacheProv}::${_cacheModel}::${text.toLowerCase()}`;
     if (state.cache[cleanText] && !state.schismActive && !state.tribunalActive && !state.omniGlassActive && !state.swarmActive) {
         input.value = ''; input.style.height = 'auto'; input.disabled = false;
         state.attachments = []; renderAttachments();
-        
+
         appendMessage('user', text, []);
         appendMessage('assistant', state.cache[cleanText], []);
         showToast("🦇 Echo Cache hit! Returning instant response (0 tokens).");
