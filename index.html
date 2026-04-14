@@ -777,7 +777,7 @@ html, body {
   <div class="chat-topbar">
     <span class="chat-topbar-icon">💬</span>
     <span class="chat-topbar-title">Chat</span>
-    <span class="chat-topbar-meta" id="chat-version-label">v4.8.0 Active</span>
+    <span class="chat-topbar-meta" id="chat-version-label">v4.8.2 Active</span>
     <div class="chat-topbar-right" id="chat-topbar-right-list">
     </div>
   </div>
@@ -814,7 +814,7 @@ html, body {
       <select class="chat-select" id="chat-cfg-provider" onchange="adamChat.onProviderChange()">
       </select>
       <span class="chat-config-div">/</span>
-      <select class="chat-select" id="chat-cfg-model">
+      <select class="chat-select" id="chat-cfg-model" onchange="adamChat.onModelChange()">
       </select>
     </div>
   </div>
@@ -3643,12 +3643,24 @@ Rule 8 — PORTABLE BY DEFAULT: No file paths. No machine-specific references. N
     const savedProvider = localStorage.getItem('adam_default_provider');
     const preferredProvider = savedProvider || a.provider;
     pSel.innerHTML = Object.entries(DATA.providers)
-      .map(([k, p]) => 
+      .map(([k, p]) =>
         `<option value="${k}" ${k === preferredProvider ? 'selected' : ''}>${p.name}</option>`
       ).join('');
     if (!pSel.value) pSel.selectedIndex = 0;
-    
-    onProviderChange(a.model);
+
+    // ── Phoenix Bug B fix (v4.8.2) ───────────────────────────────────────
+    // Restore the user's previously-chosen model ONLY if it still exists in
+    // the currently-selected provider's model catalog. Otherwise fall back
+    // to the assistant's default model (previous behavior). This prevents a
+    // cross-provider leak where e.g. a saved Groq model id gets forced onto
+    // an Anthropic provider that doesn't offer it.
+    const savedModel = localStorage.getItem('adam_default_model');
+    const provObj = DATA.providers[pSel.value];
+    const modelIsValidForProvider = provObj && Array.isArray(provObj.models)
+      && provObj.models.some(m => m.v === savedModel);
+    const restoreModel = modelIsValidForProvider ? savedModel : a.model;
+
+    onProviderChange(restoreModel);
     el('chat-input').placeholder = `Message ${a.name}...`;
   }
 
@@ -3693,7 +3705,25 @@ Rule 8 — PORTABLE BY DEFAULT: No file paths. No machine-specific references. N
     if (logoEl) logoEl.innerHTML = p.logo || '';
     // Save chosen provider as default
     localStorage.setItem('adam_default_provider', provKey);
+    // ── Phoenix Bug B fix (v4.8.2) ─────────────────────────────────────────
+    // After repopulating the model list, persist whichever model is now
+    // selected (forced value OR the dropdown's first-option fallback).
+    // This closes the gap where switching providers lost the chosen model
+    // on next reload.
+    onModelChange();
     pingAPI(false);
+  }
+
+  // ── Phoenix Bug B fix (v4.8.2) ───────────────────────────────────────────
+  // Persist the user's model choice so reload restores it. Wired from
+  // <select id="chat-cfg-model" onchange="adamChat.onModelChange()"> and
+  // also called at the tail of onProviderChange() to capture auto-selected
+  // first-option fallbacks after provider switches.
+  function onModelChange() {
+    const mSel = el('chat-cfg-model');
+    if (mSel && mSel.value) {
+      localStorage.setItem('adam_default_model', mSel.value);
+    }
   }
 
   function renderWelcome(reset = false) {
@@ -4714,7 +4744,7 @@ Rule 8 — PORTABLE BY DEFAULT: No file paths. No machine-specific references. N
     toggleRationWidget, updateRationLimit, setRationPreset, toggleRationArm,
     triggerBlackHole, toggleSwarm, toggleOmniGlass, triggerSniper,
     openSubmenu, closeSubmenuDelay, keepSubmenuOpen, toggleSwitch, toggleSysPeek,
-    switchAsst, toggleSkill, toggleBlood, applyHyperBlood, toggleInputTool, onProviderChange,
+    switchAsst, toggleSkill, toggleBlood, applyHyperBlood, toggleInputTool, onProviderChange, onModelChange,
     usePrompt, usePromptText, activateToy, showTemplates, autoGrow, onInputKey, 
     sendMessage, mockAttachFile, removeAttachment, enhancePrompt, toggleMic, 
     downloadHTML, exportChat, triggerTool, showToast,
