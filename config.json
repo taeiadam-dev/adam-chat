@@ -1,0 +1,6 @@
+{
+  "_comment": "PLACEHOLDERS ONLY. Real keys live in browser localStorage and are sent on every request via x-api-key header. server.js (Node, the primary bridge) ignores this file entirely. bridge.py (Python fallback) only reads it when the browser request lacks an x-api-key header. Do NOT paste real keys here.",
+  "gemini_key": "YOUR_GEMINI_API_KEY_HERE",
+  "openai_key": "YOUR_OPENAI_API_KEY_HERE",
+  "anthropic_key": "YOUR_ANTHROPIC_API_KEY_HERE"
+}
